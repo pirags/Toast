@@ -52,4 +52,7 @@ extern NSString * const CSToastPositionBottom;
 - (void)showToast:(UIView *)toast duration:(NSTimeInterval)interval position:(id)point
       tapCallback:(void(^)(void))tapCallback;
 
+// hides toast
+- (void)hideToast;
+
 @end

@@ -52,6 +52,7 @@ static const BOOL CSToastHidesOnTap             = YES;     // excludes activity 
 static const NSString * CSToastTimerKey         = @"CSToastTimerKey";
 static const NSString * CSToastActivityViewKey  = @"CSToastActivityViewKey";
 static const NSString * CSToastTapCallbackKey   = @"CSToastTapCallbackKey";
+static const NSString * CSToastViewKey          = @"CSToastViewKey";
 
 // positions
 NSString * const CSToastPositionTop             = @"top";
@@ -114,16 +115,18 @@ NSString * const CSToastPositionBottom          = @"buttom";
 {
     toast.center = [self centerPointForPosition:position withToast:toast];
     toast.alpha = 0.0;
-    
+
     if (CSToastHidesOnTap) {
         UITapGestureRecognizer *recognizer = [[UITapGestureRecognizer alloc] initWithTarget:toast action:@selector(handleToastTapped:)];
         [toast addGestureRecognizer:recognizer];
         toast.userInteractionEnabled = YES;
         toast.exclusiveTouch = YES;
     }
-    
+
+    // associate ourselves with the view
+    objc_setAssociatedObject (self, &CSToastViewKey, toast, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     [self addSubview:toast];
-    
+
     [UIView animateWithDuration:CSToastFadeDuration
                           delay:0.0
                         options:(UIViewAnimationOptionCurveEaseOut | UIViewAnimationOptionAllowUserInteraction)
@@ -149,6 +152,21 @@ NSString * const CSToastPositionBottom          = @"buttom";
                      }];
 }
 
+- (void)hideToast {
+    UIView *existingToast = (UIView *)objc_getAssociatedObject(self, &CSToastViewKey);
+    if (existingToast) {
+        [UIView animateWithDuration:CSToastFadeDuration
+                              delay:0.0
+                            options:(UIViewAnimationOptionCurveEaseIn | UIViewAnimationOptionBeginFromCurrentState)
+                         animations:^{
+                             existingToast.alpha = 0.0;
+                         } completion:^(BOOL finished) {
+                             [existingToast removeFromSuperview];
+                             objc_setAssociatedObject (self, &CSToastViewKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                         }];
+    }
+}
+
 #pragma mark - Events
 
 - (void)toastTimerDidFinish:(NSTimer *)timer {
@@ -158,7 +176,7 @@ NSString * const CSToastPositionBottom          = @"buttom";
 - (void)handleToastTapped:(UITapGestureRecognizer *)recognizer {
     NSTimer *timer = (NSTimer *)objc_getAssociatedObject(self, &CSToastTimerKey);
     [timer invalidate];
-    
+
     void (^callback)(void) = objc_getAssociatedObject(self, &CSToastTapCallbackKey);
     if (callback) {
         callback();
